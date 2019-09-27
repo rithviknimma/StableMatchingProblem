@@ -75,6 +75,7 @@ public class Program1 extends AbstractProgram1 {
         
         return internshipPref;
     }
+    
     private static Double computeInternshipStudentScore(double studentGPA, int studentExp, int studentProjects, int
                                                         weightGPA, int weightExp, int weightProjects){
         return studentGPA*weightGPA+studentExp*weightExp+studentProjects*weightProjects;
@@ -90,7 +91,6 @@ public class Program1 extends AbstractProgram1 {
     		return false;
     	}
     	
-    	
     	int internship;
     	int internshipPrime;
     	ArrayList<ArrayList<Integer>> studentPref = marriage.getStudentPreference();
@@ -102,10 +102,32 @@ public class Program1 extends AbstractProgram1 {
     			internship = marriage.getStudentMatching().get(student);
     			internshipPrime = marriage.getStudentMatching().get(studentPrime);
     			
-    			if() {
+    			if(internship != -1 && internshipPrime == -1) { // if studentPrime isn't matched but student is matched
+    				// if internship prefers studentPrime more, instability found
+    				if(internshipPref.get(internship).indexOf(studentPrime) < internshipPref.get(internship).indexOf(student)) {
+    					return false;
+    				}
+    			}
+    			else if(internship == -1 && internshipPrime != -1) { // if student isn't matched but student Prime is matched
+    				// if internship prefers studentPrime more, instability found
+    				if(internshipPref.get(internshipPrime).indexOf(student) < internshipPref.get(internshipPrime).indexOf(studentPrime)) {
+    					return false;
+    				}
+    			}
+    			else if(internship != -1) { // if both students are matched
+    				
+    				// if internship prefers studentprime over student and studentprime prefers internship over internshipPrime, found instability
+    				if(internshipPref.get(internship).indexOf(studentPrime) < internshipPref.get(internship).indexOf(student)
+    				   && studentPref.get(studentPrime).indexOf(internship) < studentPref.get(studentPrime).indexOf(internshipPrime)) {
+    					return false;
+    				}
+    				// if intenrshipPrime prefers student over studentPrime and student prefers internshipPrime over internship, found instability
+    				if(internshipPref.get(internshipPrime).indexOf(student) < internshipPref.get(internshipPrime).indexOf(studentPrime)
+    				   && studentPref.get(student).indexOf(internshipPrime) < studentPref.get(student).indexOf(internship)) {
+    					return false;
+    				}
     				
     			}
-    			
     		}
     	}
         return true;
