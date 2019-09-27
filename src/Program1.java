@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
+import java.util.Queue;
 
 /**
  * Your solution goes in this class.
@@ -142,9 +143,9 @@ public class Program1 extends AbstractProgram1 {
     			numOfMatched++;
     		}
     	}
-    	
     	return numOfMatched;
     }
+
 
     /**
      * Determines a solution to the Stable Marriage problem from the given input set. Study the
@@ -154,9 +155,127 @@ public class Program1 extends AbstractProgram1 {
      */
     @Override
     public Matching stableMarriageGaleShapley_studentoptimal(Matching marriage) {
-        /* TODO implement this function */
-        return null; /* TODO remove this line */
+    	ArrayList<Integer> internshipToPropose = new ArrayList<Integer>(); // keeps track of all students number of proposal, index of this corresponds to student
+    	Queue<Integer> students = new LinkedList<>(); // queue of students trying to propose
+    	ArrayList<ArrayList<Integer>> internshipMatching = new ArrayList<ArrayList<Integer>>();
+    	ArrayList<Integer> newStudentMatching = new ArrayList<Integer>();
+    	
+    	// initializing student proposals to zero
+    	// adding students to queue
+    	// initializing studentMatching to all students unmatched
+    	for(int i = 0; i < marriage.getStudentCount(); i++){
+    		internshipToPropose.add(0);
+    		students.add(i);
+    		newStudentMatching.add(-1);
+    	}
+    	
+    	// initializing internshipMatching to all internships unmatched
+    	for(int i = 0; i < marriage.getInternshipCount(); i++) {
+    		internshipMatching.add(new ArrayList<Integer>());
+    		for(int j = 0; j < marriage.getInternshipSlots().get(i); j++) {
+    			internshipMatching.get(i).add(-1);
+    		}
+    	}
+    	
+    	int numberOfProposals = 0;
+    	int totalNumberOfProposals = marriage.getStudentCount() * marriage.getInternshipCount();
+    	
+    	int internship; // internship being proposed to from student's preference list
+    	int student; // student number
+    	int sScore; // internship score for student
+    	int proposal; // student's proposal number
+    	int freeInternshipSlot; 
+    	
+    	int internshipPreference;
+    	
+    	// internships scores for each student
+    	ArrayList<ArrayList<Integer>> studentScores = new ArrayList<ArrayList<Integer>>();
+    	studentScores = computeStudentScores(marriage.getInternshipCount(), marriage.getStudentCount(),
+    																		marriage.getInternshipWeights(), marriage.getStudentGPA(), 
+    																		marriage.getStudentMonths(), marriage.getStudentProjects());
+    	
+    	while(numberOfProposals < totalNumberOfProposals && students.isEmpty() != true){ // while there exists student who hasn't proposed to internships
+    		student = students.peek(); // get student in queue
+    		proposal = internshipToPropose.get(student); // get student's number of proposals
+    		
+    		// reset what internship to propose to for student if student gets rejected by all
+    		if(proposal == marriage.getInternshipCount()) {
+    			internshipToPropose.set(student, 0); 
+    			proposal = 0;
+    		}
+    		internship = marriage.getStudentPreference().get(student).get(proposal); // iterate through student's preferred internship
+    		
+    		if(internshipMatching.get(internship).contains(-1)) { // if internship is free (slots open)
+    			newStudentMatching.set(student, internship); // matched student with internship
+    			freeInternshipSlot = internshipMatching.get(internship).indexOf(-1); // get index of free internship slot
+    			internshipMatching.get(internship).set(freeInternshipSlot, student); // matched internship with student
+    			internshipToPropose.set(student, proposal + 1); // increments number of proposals made by student
+    			numberOfProposals++; // also increments number of proposals for the while loop
+    			students.remove(); // removes student from queue
+    		}
+    		else {
+    			sScore = studentScores.get(internship).get(student); // gets score of student for internship
+    			internshipPreference = internshipPrefersStudent(sScore, internshipMatching.get(internship), studentScores.get(internship));
+    			
+    			if(internshipPreference != -1) { // if internship prefers new student over current
+    				newStudentMatching.set(student, internship); // internship matches with new student
+    				newStudentMatching.set(internshipPreference, -1);
+    				internshipMatching.get(internship).set(internshipMatching.get(internship).indexOf(internshipPreference), student); // replaces weakest student
+    				internshipToPropose.set(student, proposal + 1); // increments number of proposals made by student
+    				numberOfProposals++; // also increments number of proposals for the while loop
+    				students.remove(); // removes newly matched student from queue
+    				students.add(internshipPreference); // adds current student back onto queue as he is unmatched
+    			}
+    			else {
+    				internshipToPropose.set(student, proposal + 1); // increments number of proposals made by student
+    				numberOfProposals++; // also increments number of proposals for the while loop
+    			}
+    		}
+    	}
+    	
+    	marriage.setStudentMatching(newStudentMatching);
+    	
+        return marriage;
     }
+    
+    // returns -1 if internship does not prefer student
+    // returns weakest matched student if intenrship prefers new student
+    public int internshipPrefersStudent(int sScore, ArrayList<Integer> internshipStudents, ArrayList<Integer> studentScores) {
+    	int index = -1;
+    	int sPrimeScore;
+    	for(int i = 0; i < internshipStudents.size(); i++) {
+    		sPrimeScore = studentScores.get(internshipStudents.get(i));
+    		if(sPrimeScore < sScore) {
+    			//index = internshipStudents.indexOf(studentScores.indexOf(sPrimeScore));
+    			index = studentScores.indexOf(sPrimeScore);
+    		}
+    	}
+    	
+    	return index;
+    }
+    
+    // computes StudentScores for each student for each internship
+    public static ArrayList<ArrayList<Integer>> computeStudentScores(int internshipCount, int studentCount,
+            ArrayList<ArrayList<Integer>>internship_weights,
+            ArrayList<Double> student_GPA,
+            ArrayList<Integer> student_months,
+            ArrayList<Integer> student_projects){
+    	
+    	ArrayList<ArrayList<Integer>> studentScores = new ArrayList<ArrayList<Integer>>(internshipCount);
+    	int sScore;
+
+    	for(int i = 0; i < internshipCount; i++) {
+        	studentScores.add(new ArrayList<Integer>()); // add arraylist to each internship to keep track of scores
+        	for(int j = 0; j < studentCount; j++) {
+        		sScore = (int) Math.round(computeInternshipStudentScore(student_GPA.get(j), student_months.get(j), student_projects.get(j),
+        											   					internship_weights.get(i).get(0), internship_weights.get(i).get(1), 
+        											   					internship_weights.get(i).get(2)));
+        		studentScores.get(i).add(sScore);
+            }
+        }
+
+    	return studentScores;
+}
 
     private ArrayList<Matching> getAllStableMarriages(Matching marriage) {
         ArrayList<Matching> marriages = new ArrayList<>();
