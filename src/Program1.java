@@ -246,7 +246,6 @@ public class Program1 extends AbstractProgram1 {
     	for(int i = 0; i < internshipStudents.size(); i++) {
     		sPrimeScore = studentScores.get(internshipStudents.get(i));
     		if(sPrimeScore < sScore) {
-    			//index = internshipStudents.indexOf(studentScores.indexOf(sPrimeScore));
     			index = studentScores.indexOf(sPrimeScore);
     		}
     	}
